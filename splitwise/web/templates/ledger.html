@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Ledger - Splitwise{% endblock %}
+{% block content %}
+<h1>Ledger</h1>
+
+{% if balances %}
+{# ── Net Balances ── #}
+<div class="card">
+  <h2>Net Balances</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Net Balance</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user, balance in balances.items() %}
+      <tr>
+        <td><strong>{{ user.name }}</strong></td>
+        <td class="{% if balance > 0 %}positive{% elif balance < 0 %}negative{% endif %}">
+          {% if balance >= 0 %}+{% endif %}${{ "%.2f"|format(balance) }}
+        </td>
+        <td>
+          {% if balance > 0.01 %}
+          <span class="badge badge-green">is owed ${{ "%.2f"|format(balance) }}</span>
+          {% elif balance < -0.01 %}
+          <span class="badge badge-red">owes ${{ "%.2f"|format(balance|abs) }}</span>
+          {% else %}
+          <span class="badge badge-gray">settled up</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# ── Pairwise Debts ── #}
+{% if pairwise %}
+<div class="card">
+  <h2>Who Owes Whom</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Debtor</th>
+        <th></th>
+        <th>Creditor</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for (debtor, creditor), amount in pairwise.items() %}
+      <tr>
+        <td><strong>{{ debtor.name }}</strong></td>
+        <td class="arrow-cell">owes</td>
+        <td><strong>{{ creditor.name }}</strong></td>
+        <td>${{ "%.2f"|format(amount) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── Simplified Debts ── #}
+{% if simplified %}
+<div class="card">
+  <h2>Simplified Settlements</h2>
+  <p class="section-desc">Minimum transactions to settle all debts:</p>
+  <div class="transaction-list">
+    {% for txn in simplified %}
+    <div class="transaction-item settlement-item">
+      <span class="txn-payer">{{ txn.payer.name }}</span>
+      <span class="txn-arrow">pays</span>
+      <span class="txn-payee">{{ txn.payee.name }}</span>
+      <span class="txn-amount">${{ "%.2f"|format(txn.amount) }}</span>
+
+      <form method="POST" action="{{ url_for('main.settle') }}" class="inline-form settle-form">
+        <input type="hidden" name="payer_id" value="{{ txn.payer.id }}">
+        <input type="hidden" name="payee_id" value="{{ txn.payee.id }}">
+        <input type="hidden" name="amount" value="{{ txn.amount }}">
+        <button type="submit" class="btn btn-sm btn-success"
+                onclick="return confirm('Record that {{ txn.payer.name }} paid {{ txn.payee.name }} ${{ '%.2f'|format(txn.amount) }}?')">
+          Mark as Settled
+        </button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card empty-state">
+  <p>No balances yet. <a href="{{ url_for('main.add_expense_page') }}">Add an expense</a> to see the ledger.</p>
+</div>
+{% endif %}
+{% endblock %}

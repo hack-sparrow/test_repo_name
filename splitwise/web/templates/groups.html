@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Groups - Splitwise{% endblock %}
+{% block content %}
+<h1>Manage Groups</h1>
+
+{% if users %}
+<div class="card">
+  <h2>Create Group</h2>
+  <form method="POST" action="{{ url_for('main.add_group') }}">
+    <div class="form-group">
+      <label for="name">Group Name *</label>
+      <input type="text" id="name" name="name" required placeholder="e.g. Weekend Trip">
+    </div>
+    <div class="form-group">
+      <label>Members</label>
+      <div class="checkbox-group">
+        {% for user in users %}
+        <label class="checkbox-label">
+          <input type="checkbox" name="members" value="{{ user.id }}">
+          {{ user.name }}
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Group</button>
+  </form>
+</div>
+{% else %}
+<div class="card empty-state">
+  <p>Add <a href="{{ url_for('main.users') }}">users</a> first before creating groups.</p>
+</div>
+{% endif %}
+
+{% if groups %}
+<div class="card">
+  <h2>All Groups ({{ groups|length }})</h2>
+  {% for group in groups %}
+  <div class="group-card">
+    <h3>{{ group.name }}</h3>
+    <div class="group-members">
+      <strong>Members:</strong>
+      {% if group.members %}
+        {{ group.members|map(attribute='name')|join(', ') }}
+      {% else %}
+        <em>No members</em>
+      {% endif %}
+    </div>
+    <div class="group-expenses">
+      <strong>Expenses:</strong> {{ group.expenses|length }}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Add Expense - Splitwise{% endblock %}
+{% block content %}
+<h1>Add Expense</h1>
+
+{% if not confirm and not followup %}
+{# ── Initial Input ── #}
+<div class="card">
+  <h2>Describe the expense</h2>
+  <p class="section-desc">Type in natural language. Examples:</p>
+  <ul class="examples-list">
+    <li>"Alice paid 50 for dinner with Bob and Charlie"</li>
+    <li>"Bob paid $120 for groceries split equally with Alice, Charlie, and Dave"</li>
+    <li>"Alice paid 200 for hotel split Alice 100 Bob 60 Charlie 40"</li>
+    <li>"Alice paid 100 for taxi with Bob 60% Alice 40%"</li>
+  </ul>
+  <form method="POST" action="{{ url_for('main.add_expense_page') }}">
+    <input type="hidden" name="action" value="parse">
+    <div class="form-group">
+      <label for="text">Expense description</label>
+      <textarea id="text" name="text" rows="3" required autofocus
+                placeholder="e.g. Alice paid 50 for dinner with Bob and Charlie"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Parse Expense</button>
+  </form>
+</div>
+{% endif %}
+
+{% if followup and parsed %}
+{# ── Follow-up Questions ── #}
+<div class="card">
+  <h2>Need more info</h2>
+
+  {% if parsed.payer_name or parsed.amount or parsed.description or parsed.participant_names %}
+  <div class="parsed-summary">
+    <h3>What I understood:</h3>
+    <ul>
+      {% if parsed.payer_name %}<li><strong>Paid by:</strong> {{ parsed.payer_name }}</li>{% endif %}
+      {% if parsed.amount %}<li><strong>Amount:</strong> ${{ "%.2f"|format(parsed.amount) }}</li>{% endif %}
+      {% if parsed.description %}<li><strong>For:</strong> {{ parsed.description }}</li>{% endif %}
+      {% if parsed.participant_names %}<li><strong>Participants:</strong> {{ parsed.participant_names|join(', ') }}</li>{% endif %}
+      {% if parsed.split_type %}<li><strong>Split:</strong> {{ parsed.split_type }}</li>{% endif %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('main.add_expense_page') }}">
+    <input type="hidden" name="action" value="followup">
+    <input type="hidden" name="payer_name" value="{{ parsed.payer_name or '' }}">
+    <input type="hidden" name="amount" value="{{ parsed.amount or '' }}">
+    <input type="hidden" name="description" value="{{ parsed.description or '' }}">
+    <input type="hidden" name="participant_names" value="{{ parsed.participant_names|tojson }}">
+    <input type="hidden" name="split_type" value="{{ parsed.split_type or '' }}">
+    <input type="hidden" name="split_details" value="{{ parsed.split_details|tojson }}">
+    <input type="hidden" name="questions" value="{{ parsed.questions|tojson }}">
+    <input type="hidden" name="raw_input" value="{{ parsed.raw_input }}">
+    <input type="hidden" name="question_index" value="0">
+
+    <div class="followup-question">
+      <label for="answer">{{ parsed.questions[0] }}</label>
+      <input type="text" id="answer" name="answer" required autofocus
+             placeholder="Type your answer...">
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Submit</button>
+      <a href="{{ url_for('main.add_expense_page') }}" class="btn btn-secondary">Start Over</a>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+{% if confirm and parsed %}
+{# ── Confirmation ── #}
+<div class="card">
+  <h2>Confirm Expense</h2>
+  <div class="parsed-summary confirm-summary">
+    <ul>
+      <li><strong>Paid by:</strong> {{ parsed.payer_name }}</li>
+      <li><strong>Amount:</strong> ${{ "%.2f"|format(parsed.amount) }}</li>
+      <li><strong>For:</strong> {{ parsed.description }}</li>
+      <li><strong>Participants:</strong> {{ parsed.participant_names|join(', ') }}</li>
+      <li><strong>Split:</strong> {{ parsed.split_type }}
+        {% if parsed.split_details %}
+          — {% for name, val in parsed.split_details.items() %}
+            {{ name }}: {{ val }}{% if parsed.split_type == 'percentage' %}%{% endif %}{% if not loop.last %}, {% endif %}
+          {% endfor %}
+        {% endif %}
+      </li>
+    </ul>
+  </div>
+
+  <form method="POST" action="{{ url_for('main.add_expense_page') }}">
+    <input type="hidden" name="action" value="confirm">
+    <input type="hidden" name="payer_name" value="{{ parsed.payer_name }}">
+    <input type="hidden" name="amount" value="{{ parsed.amount }}">
+    <input type="hidden" name="description" value="{{ parsed.description }}">
+    <input type="hidden" name="participant_names" value="{{ parsed.participant_names|tojson }}">
+    <input type="hidden" name="split_type" value="{{ parsed.split_type }}">
+    <input type="hidden" name="split_details" value="{{ parsed.split_details|tojson }}">
+
+    {% if groups %}
+    <div class="form-group">
+      <label for="group_id">Assign to group (optional)</label>
+      <select id="group_id" name="group_id">
+        <option value="">— No group —</option>
+        {% for group in groups %}
+        <option value="{{ group.id }}">{{ group.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Add Expense</button>
+      <a href="{{ url_for('main.add_expense_page') }}" class="btn btn-secondary">Start Over</a>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

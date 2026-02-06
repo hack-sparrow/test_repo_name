@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Splitwise{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('main.static', filename='style.css') }}">
+</head>
+<body>
+  {% if session.get('logged_in') %}
+  <nav class="navbar">
+    <div class="nav-brand">Splitwise</div>
+    <div class="nav-links">
+      <a href="{{ url_for('main.dashboard') }}" class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="{{ url_for('main.users') }}" class="{% if request.endpoint == 'main.users' %}active{% endif %}">Users</a>
+      <a href="{{ url_for('main.groups') }}" class="{% if request.endpoint == 'main.groups' %}active{% endif %}">Groups</a>
+      <a href="{{ url_for('main.add_expense_page') }}" class="{% if request.endpoint == 'main.add_expense_page' %}active{% endif %}">Add Expense</a>
+      <a href="{{ url_for('main.history') }}" class="{% if request.endpoint == 'main.history' %}active{% endif %}">History</a>
+      <a href="{{ url_for('main.ledger') }}" class="{% if request.endpoint == 'main.ledger' %}active{% endif %}">Ledger</a>
+      <a href="{{ url_for('main.logout') }}" class="nav-logout">Logout</a>
+    </div>
+  </nav>
+  {% endif %}
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

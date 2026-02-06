@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Users - Splitwise{% endblock %}
+{% block content %}
+<h1>Manage Users</h1>
+
+<div class="card">
+  <h2>Add New User</h2>
+  <p class="section-desc">Users don't need an account. Just add their name.</p>
+  <form method="POST" action="{{ url_for('main.add_user') }}" class="form-inline">
+    <div class="form-group">
+      <label for="name">Name *</label>
+      <input type="text" id="name" name="name" required placeholder="e.g. Alice">
+    </div>
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="Optional">
+    </div>
+    <div class="form-group">
+      <label for="phone">Phone</label>
+      <input type="text" id="phone" name="phone" placeholder="Optional">
+    </div>
+    <button type="submit" class="btn btn-primary">Add User</button>
+  </form>
+</div>
+
+{% if users %}
+<div class="card">
+  <h2>All Users ({{ users|length }})</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Balance</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      {% set bal = balances.get(user, 0) %}
+      <tr>
+        <td><strong>{{ user.name }}</strong></td>
+        <td>{{ user.email or '—' }}</td>
+        <td>{{ user.phone or '—' }}</td>
+        <td class="{% if bal > 0 %}positive{% elif bal < 0 %}negative{% endif %}">
+          {% if bal > 0 %}+{% endif %}${{ "%.2f"|format(bal) }}
+        </td>
+        <td>
+          <form method="POST" action="{{ url_for('main.delete_user', user_id=user.id) }}" class="inline-form"
+                onsubmit="return confirm('Remove {{ user.name }}?')">
+            <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card empty-state">
+  <p>No users yet. Add one above to get started.</p>
+</div>
+{% endif %}
+{% endblock %}

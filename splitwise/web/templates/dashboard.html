@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Splitwise{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-value">{{ users|length }}</div>
+    <div class="stat-label">Users</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ groups|length }}</div>
+    <div class="stat-label">Groups</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ expenses|length }}</div>
+    <div class="stat-label">Expenses</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">${{ "%.2f"|format(expenses|sum(attribute='total_amount')) }}</div>
+    <div class="stat-label">Total Tracked</div>
+  </div>
+</div>
+
+{% if simplified %}
+<div class="card">
+  <h2>Simplified Debts</h2>
+  <p class="section-desc">Minimum transactions needed to settle all debts:</p>
+  <div class="transaction-list">
+    {% for txn in simplified %}
+    <div class="transaction-item">
+      <span class="txn-payer">{{ txn.payer.name }}</span>
+      <span class="txn-arrow">owes</span>
+      <span class="txn-payee">{{ txn.payee.name }}</span>
+      <span class="txn-amount">${{ "%.2f"|format(txn.amount) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if balances %}
+<div class="card">
+  <h2>Current Balances</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Balance</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user, balance in balances.items() %}
+      <tr>
+        <td>{{ user.name }}</td>
+        <td class="{% if balance > 0 %}positive{% elif balance < 0 %}negative{% endif %}">
+          ${{ "%.2f"|format(balance|abs) }}
+        </td>
+        <td>
+          {% if balance > 0 %}
+          <span class="badge badge-green">is owed</span>
+          {% elif balance < 0 %}
+          <span class="badge badge-red">owes</span>
+          {% else %}
+          <span class="badge badge-gray">settled</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if not users %}
+<div class="card empty-state">
+  <h2>Get Started</h2>
+  <p>Start by <a href="{{ url_for('main.users') }}">adding users</a>, then <a href="{{ url_for('main.add_expense_page') }}">add an expense</a>.</p>
+</div>
+{% endif %}
+{% endblock %}
