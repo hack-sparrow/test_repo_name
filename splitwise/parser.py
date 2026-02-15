@@ -59,13 +59,14 @@ def _extract_amount(text: str) -> tuple[float | None, str]:
             return float(amount_str), _normalize(remaining)
 
     # Fallback: find any standalone number that looks like money
-    match = re.search(r'(?<!\w)([\d,]+(?:\.\d{1,2})?)(?!\w*%)', text)
+    match = re.search(r'(?<!\w)(\d[\d,]*(?:\.\d{1,2})?)(?!\w*%)', text)
     if match:
         amount_str = match.group(1).replace(",", "")
-        val = float(amount_str)
-        if val > 0:
-            remaining = text[:match.start()] + text[match.end():]
-            return val, _normalize(remaining)
+        if amount_str:
+            val = float(amount_str)
+            if val > 0:
+                remaining = text[:match.start()] + text[match.end():]
+                return val, _normalize(remaining)
 
     return None, text
 
