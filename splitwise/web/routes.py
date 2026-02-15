@@ -167,6 +167,18 @@ def add_expense_page():
             text = request.form.get("text", "")
             result = parse_expense(text, known_names=known_names)
 
+            # Default: if no participants found, include all users
+            if len(result.participant_names) < 2 and len(all_users) >= 2:
+                result.participant_names = [u.name for u in all_users]
+                result.split_type = result.split_type or "equal"
+                # Remove the participants question since we defaulted
+                result.questions = [
+                    q for q in result.questions
+                    if "split with" not in q.lower() and "who should" not in q.lower()
+                ]
+                if not result.questions:
+                    result.state = ParseState.COMPLETE
+
             if result.is_complete:
                 return render_template(
                     "add_expense.html",
@@ -240,15 +252,17 @@ def _reconstruct_parse_result(form):
 
 
 def _confirm_expense(form, known_names):
-    """Create the expense from confirmed parsed data."""
+    """Create the expense from the editable confirmation form."""
     payer_name = form.get("payer_name", "").strip()
-    amount = float(form.get("amount", 0))
+    amount_str = form.get("amount", "0")
+    try:
+        amount = float(amount_str)
+    except ValueError:
+        flash("Invalid amount.", "error")
+        return redirect(url_for("main.add_expense_page"))
     description = form.get("description", "").strip()
-    participants_json = form.get("participant_names", "[]")
-    participant_names = json.loads(participants_json)
+    participant_names = form.getlist("participants")
     split_type_str = form.get("split_type", "equal")
-    split_details_json = form.get("split_details", "{}")
-    split_details = json.loads(split_details_json)
     group_id = form.get("group_id") or None
 
     # Resolve payer
@@ -266,6 +280,10 @@ def _confirm_expense(form, known_names):
         else:
             flash(f"Could not find user '{name}'. Please create them first.", "error")
             return redirect(url_for("main.add_expense_page"))
+
+    # Ensure payer is always a participant
+    if payer not in participants:
+        participants.insert(0, payer)
 
     if len(participants) < 2:
         flash("Need at least 2 participants.", "error")
@@ -285,17 +303,14 @@ def _confirm_expense(form, known_names):
     elif s_type in (SplitType.EXACT, SplitType.PERCENTAGE, SplitType.SHARES):
         split_data = {}
         for user in participants:
-            val = split_details.get(user.name)
-            if val is None:
-                # Fallback: look case-insensitively
-                for k, v in split_details.items():
-                    if k.lower() == user.name.lower():
-                        val = v
-                        break
-            if val is not None:
-                split_data[user] = float(val)
-            else:
+            val_str = form.get(f"split_val_{user.name}", "")
+            if not val_str:
                 flash(f"Missing split value for '{user.name}'.", "error")
+                return redirect(url_for("main.add_expense_page"))
+            try:
+                split_data[user] = float(val_str)
+            except ValueError:
+                flash(f"Invalid split value for '{user.name}'.", "error")
                 return redirect(url_for("main.add_expense_page"))
     else:
         split_data = {u: None for u in participants}

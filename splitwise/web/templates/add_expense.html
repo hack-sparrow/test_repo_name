@@ -71,39 +71,75 @@
 {% endif %}
 
 {% if confirm and parsed %}
-{# ── Confirmation ── #}
+{# ── Confirmation (editable) ── #}
 <div class="card">
-  <h2>Confirm Expense</h2>
-  <div class="parsed-summary confirm-summary">
-    <ul>
-      <li><strong>Paid by:</strong> {{ parsed.payer_name }}</li>
-      <li><strong>Amount:</strong> ${{ "%.2f"|format(parsed.amount) }}</li>
-      <li><strong>For:</strong> {{ parsed.description }}</li>
-      <li><strong>Participants:</strong> {{ parsed.participant_names|join(', ') }}</li>
-      <li><strong>Split:</strong> {{ parsed.split_type }}
-        {% if parsed.split_details %}
-          — {% for name, val in parsed.split_details.items() %}
-            {{ name }}: {{ val }}{% if parsed.split_type == 'percentage' %}%{% endif %}{% if not loop.last %}, {% endif %}
-          {% endfor %}
-        {% endif %}
-      </li>
-    </ul>
-  </div>
+  <h2>Confirm &amp; Edit Expense</h2>
+  <p class="section-desc">Review the parsed details below. Change anything before saving.</p>
 
-  <form method="POST" action="{{ url_for('main.add_expense_page') }}">
+  <form method="POST" action="{{ url_for('main.add_expense_page') }}" id="confirm-form">
     <input type="hidden" name="action" value="confirm">
-    <input type="hidden" name="payer_name" value="{{ parsed.payer_name }}">
-    <input type="hidden" name="amount" value="{{ parsed.amount }}">
-    <input type="hidden" name="description" value="{{ parsed.description }}">
-    <input type="hidden" name="participant_names" value='{{ parsed.participant_names|tojson }}'>
-    <input type="hidden" name="split_type" value="{{ parsed.split_type }}">
-    <input type="hidden" name="split_details" value='{{ parsed.split_details|tojson }}'>
+
+    <div class="confirm-grid">
+      <div class="form-group">
+        <label for="description">Description</label>
+        <input type="text" id="description" name="description" required
+               value="{{ parsed.description }}">
+      </div>
+
+      <div class="form-group">
+        <label for="amount">Amount ($)</label>
+        <input type="number" id="amount" name="amount" step="0.01" min="0.01" required
+               value="{{ parsed.amount }}">
+      </div>
+
+      <div class="form-group">
+        <label for="payer_name">Paid by</label>
+        <select id="payer_name" name="payer_name" required>
+          {% for user in users %}
+          <option value="{{ user.name }}" {% if user.name == parsed.payer_name %}selected{% endif %}>
+            {{ user.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="split_type">Split type</label>
+        <select id="split_type" name="split_type" onchange="toggleSplitFields()">
+          <option value="equal" {% if parsed.split_type == 'equal' %}selected{% endif %}>Equal</option>
+          <option value="exact" {% if parsed.split_type == 'exact' %}selected{% endif %}>Exact amounts</option>
+          <option value="percentage" {% if parsed.split_type == 'percentage' %}selected{% endif %}>Percentage</option>
+          <option value="shares" {% if parsed.split_type == 'shares' %}selected{% endif %}>Shares</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Split between (select participants)</label>
+      <div class="checkbox-group">
+        {% for user in users %}
+        <label class="checkbox-label participant-cb">
+          <input type="checkbox" name="participants" value="{{ user.name }}"
+                 class="participant-check"
+                 onchange="toggleSplitFields()"
+                 {% if user.name in parsed.participant_names %}checked{% endif %}>
+          {{ user.name }}
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Dynamic split value fields — shown when split type is not "equal" #}
+    <div id="split-values" class="card split-values-card" style="display:none;">
+      <h3 id="split-values-label">Per-person values</h3>
+      <div id="split-fields"></div>
+    </div>
 
     {% if groups %}
     <div class="form-group">
       <label for="group_id">Assign to group (optional)</label>
       <select id="group_id" name="group_id">
-        <option value="">— No group —</option>
+        <option value="">-- No group --</option>
         {% for group in groups %}
         <option value="{{ group.id }}">{{ group.name }}</option>
         {% endfor %}
@@ -117,5 +153,48 @@
     </div>
   </form>
 </div>
+
+<script>
+function toggleSplitFields() {
+  var splitType = document.getElementById('split_type').value;
+  var container = document.getElementById('split-values');
+  var fieldsDiv = document.getElementById('split-fields');
+  var label = document.getElementById('split-values-label');
+
+  if (splitType === 'equal') {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+
+  var labels = {
+    'exact': 'Amount per person ($)',
+    'percentage': 'Percentage per person (%)',
+    'shares': 'Shares per person'
+  };
+  label.textContent = labels[splitType] || 'Per-person values';
+
+  // Get checked participants
+  var checks = document.querySelectorAll('.participant-check:checked');
+  var html = '';
+  var parsedDetails = {{ parsed.split_details|tojson }};
+
+  checks.forEach(function(cb) {
+    var name = cb.value;
+    var existing = parsedDetails[name] || '';
+    html += '<div class="split-field-row">';
+    html += '<label>' + name + '</label>';
+    html += '<input type="number" name="split_val_' + name + '" step="0.01" ';
+    html += 'value="' + existing + '" required placeholder="0">';
+    html += '</div>';
+  });
+
+  fieldsDiv.innerHTML = html;
+}
+
+// Run on page load to show fields if split type is not equal
+document.addEventListener('DOMContentLoaded', toggleSplitFields);
+</script>
 {% endif %}
 {% endblock %}

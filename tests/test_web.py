@@ -134,11 +134,43 @@ class TestExpense:
             "payer_name": "Alice",
             "amount": "100",
             "description": "Dinner",
-            "participant_names": '["Alice", "Bob"]',
+            "participants": ["Alice", "Bob"],
             "split_type": "equal",
-            "split_details": "{}",
         }, follow_redirects=True)
         assert b"added" in resp.data
+
+    def test_confirm_expense_exact_split(self, client):
+        _login(client)
+        splitwise_app.add_user("Alice")
+        splitwise_app.add_user("Bob")
+        resp = client.post("/expense", data={
+            "action": "confirm",
+            "payer_name": "Alice",
+            "amount": "100",
+            "description": "Dinner",
+            "participants": ["Alice", "Bob"],
+            "split_type": "exact",
+            "split_val_Alice": "60",
+            "split_val_Bob": "40",
+        }, follow_redirects=True)
+        assert b"added" in resp.data
+
+    def test_default_participants_all_users(self, client):
+        _login(client)
+        splitwise_app.add_user("Alice")
+        splitwise_app.add_user("Bob")
+        splitwise_app.add_user("Charlie")
+        # "Alice paid 50 for lunch" — no participants mentioned
+        resp = client.post("/expense", data={
+            "action": "parse",
+            "text": "Alice paid 50 for lunch",
+        })
+        assert resp.status_code == 200
+        # Should go to confirm (all users defaulted), not followup
+        assert b"Confirm" in resp.data
+        assert b"Alice" in resp.data
+        assert b"Bob" in resp.data
+        assert b"Charlie" in resp.data
 
 
 class TestHistory:
