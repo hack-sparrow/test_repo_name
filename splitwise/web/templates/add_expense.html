@@ -49,10 +49,10 @@
     <input type="hidden" name="payer_name" value="{{ parsed.payer_name or '' }}">
     <input type="hidden" name="amount" value="{{ parsed.amount or '' }}">
     <input type="hidden" name="description" value="{{ parsed.description or '' }}">
-    <input type="hidden" name="participant_names" value="{{ parsed.participant_names|tojson }}">
+    <input type="hidden" name="participant_names" value='{{ parsed.participant_names|tojson }}'>
     <input type="hidden" name="split_type" value="{{ parsed.split_type or '' }}">
-    <input type="hidden" name="split_details" value="{{ parsed.split_details|tojson }}">
-    <input type="hidden" name="questions" value="{{ parsed.questions|tojson }}">
+    <input type="hidden" name="split_details" value='{{ parsed.split_details|tojson }}'>
+    <input type="hidden" name="questions" value='{{ parsed.questions|tojson }}'>
     <input type="hidden" name="raw_input" value="{{ parsed.raw_input }}">
     <input type="hidden" name="question_index" value="0">
 
@@ -95,9 +95,9 @@
     <input type="hidden" name="payer_name" value="{{ parsed.payer_name }}">
     <input type="hidden" name="amount" value="{{ parsed.amount }}">
     <input type="hidden" name="description" value="{{ parsed.description }}">
-    <input type="hidden" name="participant_names" value="{{ parsed.participant_names|tojson }}">
+    <input type="hidden" name="participant_names" value='{{ parsed.participant_names|tojson }}'>
     <input type="hidden" name="split_type" value="{{ parsed.split_type }}">
-    <input type="hidden" name="split_details" value="{{ parsed.split_details|tojson }}">
+    <input type="hidden" name="split_details" value='{{ parsed.split_details|tojson }}'>
 
     {% if groups %}
     <div class="form-group">
